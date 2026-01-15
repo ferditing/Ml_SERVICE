@@ -1,22 +1,12 @@
 from fastapi import FastAPI, HTTPException
 import joblib
 import os
-
 from preprocessing import build_feature_vector
 
-# ----------------------------
-# App
-# ----------------------------
 app = FastAPI(title="Smart Livestock ML Service")
 
-# ----------------------------
-# Load model artifact
-# ----------------------------
 ROOT = os.path.dirname(__file__)
 MODEL_PATH = os.path.join(ROOT, "decision_tree_model.pkl")
-
-if not os.path.exists(MODEL_PATH):
-    raise RuntimeError(f"Model not found at {MODEL_PATH}")
 
 artifact = joblib.load(MODEL_PATH)
 
@@ -24,23 +14,10 @@ model = artifact["model"]
 FEATURES = artifact["features"]
 LABELS = artifact["label_encoder_classes"]
 
-print(f"Loaded model with {len(FEATURES)} features")
-print("Labels:", LABELS)
-
-# ----------------------------
-# Health check
-# ----------------------------
 @app.get("/health")
 def health():
-    return {
-        "status": "ok",
-        "features_count": len(FEATURES),
-        "labels": LABELS
-    }
+    return {"status": "ok", "features": FEATURES, "labels": LABELS}
 
-# ----------------------------
-# Prediction endpoint
-# ----------------------------
 @app.post("/predict")
 def predict(payload: dict):
     try:
@@ -50,8 +27,7 @@ def predict(payload: dict):
 
         return {
             "predicted_label": LABELS[pred_idx],
-            "confidence": round(proba, 3)
+            "confidence": round(proba, 3),
         }
-
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
